@@ -1,0 +1,537 @@
+<%
+  const getName = (key) => {
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, (str) => str.toUpperCase())
+      .replace(/\sN\s/g, ' & ')
+  }
+  const getResult = (form, formParameter, key, colspan = 2) => {
+    const value = form[key]
+    if (value == undefined) {
+      return `<td colspan=${colspan} class='ft8'></td>`
+    }
+
+    if (key.includes('Lampiran') || (value.includes('.jpg') || value.includes('.png') || value.includes('.jpeg') || value.includes('.svg') || value.includes('.gif'))) {
+      if (value.includes('.jpg') || value.includes('.png') || value.includes('.jpeg') || value.includes('.svg') || value.includes('.gif')) {
+        const noImage = 'img/no-image.png';
+        return `<td colspan=${colspan}><img src='${value}' alt='image' style='width: 250px' onerror="this.onerror=null;this.src='${getAsset(noImage)}'" /></td>`
+      } else {
+        return `<td colspan=${colspan} class='ft8'><a href='${value}'>Lampiran</a></td>`
+      }
+    } else if (value == null) {
+      return `<td colspan=${colspan} class='ft8'></td>`
+    } else {
+      return `<td colspan=${colspan} class='ft8'>${value}</td>`
+    }
+  }
+
+  const generateTable1H = (data, pro, type = '1h') => {
+    const formVersion = data.formDetails.formVersion
+    let result = ''
+    result += `<tr><td colspan=18 class="text-center ft11 bold color-gray2" style="width: 1400px;">${data.title}${formVersion.version != undefined ? ` (versi ${formVersion.version})`: ''}</td></tr>`
+    const startedPro = moment(pro.startedAt)
+    let nextHour
+    if (type == '1h') {
+      nextHour = parseInt(startedPro.format('HH')) + 1
+    } else {
+      nextHour = parseInt(startedPro.format('HH'))
+    }
+    // const startTime = moment(startedPro.format(`YYYY-MM-DD ${nextHour}:00:00`), 'YYYY-MM-DD HH:mm:SS')
+    const startTime = moment(startedPro.format("YYYY-MM-DD HH:00:00"), 'YYYY-MM-DD HH:mm:SS')
+    
+    let n = 1
+    const operator = []
+    const validator = {
+      TEAM_LEADER: '-',
+      LINE_CONTROL: '-',
+      SUPERVISOR: '-'
+    }
+    if (data.submittedForms.length > 0) {
+      console.log("mashok");
+      let header = ''
+      let row = []
+      while (startTime < moment(data.submittedForms[data.submittedForms.length - 1].createdAt)) {
+        if (n % 12 == 1) {
+          result += `<tr><td class="text-center ft9 bold">No.</td><td colspan=2 class="text-center ft9 bold">Parameter</td><td class="text-center ft9 bold">CCP/ORP</td><td colspan=2 class="text-center ft9 bold">Target/Standard</td>`
+        }
+        header += `<td class='text-center ft9'>${startTime.format('HH:mm')}</td>`
+        const filteredData = data.submittedForms.filter((x) => {
+          if (moment(x.createdAt) >= startTime && moment(x.createdAt) <= moment(`${startTime.format('YYYY-MM-DD')} ${startTime.format('HH')}:59:59`, 'YYYY-MM-DD HH:mm:SS')) {
+            return true
+          }
+        })
+
+        const parsedFilteredData = JSON.parse(JSON.stringify(filteredData));
+
+        // if (filteredData.length > 0) {
+        //   operator.push({
+        //     operator: JSON.parse(JSON.stringify(filteredData[0].operator)),
+        //     time: startTime.format('HH:mm')
+        //   })
+        //   const TL = filteredData[0].validator.filter((x) => x.roleType == 'TEAM_LEADER')
+        //   const LC = filteredData[0].validator.filter((x) => x.roleType == 'LINE_CONTROL')
+        //   const SPV = filteredData[0].validator.filter((x) => x.roleType == 'SUPERVISOR')
+        //   if (TL.length > 0 && validator.TEAM_LEADER == '-') {
+        //     validator.TEAM_LEADER = `${TL[0].user.firstName} ${TL[0].user.lastName}\nSIGNED\n${moment(TL[0].createdAt).format('DD MMM YYYY')}`
+        //   }
+        //   if (LC.length > 0 && validator.LINE_CONTROL == '-') {
+        //     validator.LINE_CONTROL = `${LC[0].user.firstName} ${LC[0].user.lastName}\nSIGNED\n${moment(LC[0].createdAt).format('DD MMM YYYY')}`
+        //   }
+        //   if (SPV.length > 0 && validator.SUPERVISOR == '-') {
+        //     validator.SUPERVISOR = `${SPV[0].user.firstName} ${SPV[0].user.lastName}\nSIGNED\n${moment(SPV[0].createdAt).format('DD MMM YYYY')}`
+        //   }
+        // }
+        const nextHour = startTime.add(1, 'hours')
+        for (let i = 0; i < data.formDetails.formParameters.length; i++) {
+          if (n == 1) {
+            if (typeof row[i] == 'undefined') {
+              row[i] = []
+              row[i].push(`<td class="ft8 text-center">${i + 1}</td>`)
+              row[i].push(`<td colspan=2 class="ft8">${getName(data.formDetails.formParameters[i].fieldName)}</td>`)
+              row[i].push('<td></td>')
+              row[i].push(`<td colspan=2 class="ft8">${data.formDetails.formParameters[i].standardParameters.map( (x) => { return x.target; }).toString()}</td>`)
+            }
+          }
+          if (filteredData.length > 0) {
+            row[i].push(getResult(parsedFilteredData[0], data.formDetails.formParameters[i], data.formDetails.formParameters[i].fieldName, 1))
+          } else {
+            row[i].push('<td></td>')
+          }
+          if (n == 12 || nextHour > moment(data.submittedForms[data.submittedForms.length - 1].createdAt)) {
+            if (n != 12) {
+              row[i] = `<tr>${row[i].join('')}${'<td style="width: 50px;"></td>'.repeat(12 - n)}</tr>` 
+            } else {
+              row[i] = `<tr>${row[i].join('')}</tr>`
+            }
+          }
+        }
+        if (n == 12 || nextHour > moment(data.submittedForms[data.submittedForms.length - 1].createdAt)) {
+          if (n != 12) {
+            result += `${header}${'<td></td>'.repeat(12 - n)}</tr>`
+          } else {
+            result += `${header}</tr>`
+          }
+          header = ''
+          result += `${row.join('')}`
+          row = []
+        }
+        if (n >= 12) {
+          n = 1
+        } else {
+          n++
+        }
+      }
+    } else {
+      result += `<tr><td class="text-center ft9 bold">No.</td><td colspan=2 class="text-center ft9 bold">Parameter</td><td class="text-center ft9 bold">CCP/ORP</td><td colspan=2 class="text-center ft9 bold">Target/Standard</td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td></tr>`
+      result += `<tr style='height: 20px;'><td class="text-center ft9 bold"></td><td colspan=2 class="text-center ft9 bold"></td><td class="text-center ft9 bold"></td><td colspan=2 class="text-center ft9 bold"></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td><td style='width: 50px'></td></tr>`
+    }
+    return { result, operator, validator }
+  }
+
+  const generateTablePerShift = (data, pro) => {
+    const formVersion = data.formDetails.formVersion
+    let result = ''
+    result += `<tr><td colspan=18 class="text-center ft11 bold color-gray2" style="width: 1400px;">${data.title}${formVersion.version != undefined ? ` (versi ${formVersion.version})`: ''}</td></tr>`
+    const startedPro = moment(pro.startedAt)
+    let nextShift
+    const startTime = moment(startedPro.format(`YYYY-MM-DD HH:mm:SS`), 'YYYY-MM-DD HH:mm:SS')
+    
+    let n = 1
+    const operator = []
+    const validator = {
+      TEAM_LEADER: '-',
+      LINE_CONTROL: '-',
+      SUPERVISOR: '-'
+    }
+    if (data.submittedForms.length > 0) {
+      
+      let header = ''
+      let row = []
+
+      let currentDate = moment(startedPro.format(`YYYY-MM-DD HH:mm:SS`), 'YYYY-MM-DD HH:mm:SS')
+      let checkDate = moment(currentDate).add(1, 'days')
+      let newRow = true;
+      let shift1 = false;
+      let shift2 = false;
+      let shift3 = false;
+      for (let iter = 0; iter < data.submittedForms.length; iter++) {
+      // while (startTime < moment(data.submittedForms[data.submittedForms.length - 1].createdAt)) {
+        // if (n % 3 == 1) {
+        if (newRow) {
+          result += `<tr><td class="text-center ft9 bold">No.</td><td colspan=2 class="text-center ft9 bold">Parameter</td><td class="text-center ft9 bold">CCP/ORP</td><td colspan=2 class="text-center ft9 bold">Target/Standard</td><td colspan=4 class='text-center ft9'>Shif 1</td><td colspan=4 class='text-center ft9'>Shif 2</td><td colspan=4 class='text-center ft9'>Shif 3</td></tr>`
+        }
+        // header += `<td colspan=4 class='text-center ft9'>Shif ${n}</td>`
+        // const filteredData = data.submittedForms.filter((x) => {
+        //   const endshift = moment(startTime);
+        //   if (moment(x.createdAt) >= startTime && moment(x.createdAt) < moment(`${endshift.add(8, "hours").format("YYYY-MM-DD HH:mm:SS")}`, "YYYY-MM-DD HH:mm:SS")) {
+        //     return true
+        //   }
+        // })
+        // const parsedFilteredData = JSON.parse(JSON.stringify(filteredData));
+        const parsedFilteredData = JSON.parse(JSON.stringify(data.submittedForms[iter]));
+        
+        const nextShift = startTime.add(8, 'hours')
+        for (let i = 0; i < data.formDetails.formParameters.length; i++) {
+          // if (n == 1) {
+          if (newRow) {
+            if (typeof row[i] == 'undefined') {
+              row[i] = []
+              row[i].push(`<td class="ft8 text-center">${i + 1}</td>`)
+              row[i].push(`<td colspan=2 class="ft8">${getName(data.formDetails.formParameters[i].fieldName)}</td>`)
+              row[i].push('<td></td>')
+              row[i].push(`<td colspan=2 class="ft8">${data.formDetails.formParameters[i].standardParameters.map( (x) => { return x.target; }).toString()}</td>`)
+            }
+          }
+
+          if (parsedFilteredData.shift == 1) {
+            row[i].push(getResult(parsedFilteredData, data.formDetails.formParameters[i], data.formDetails.formParameters[i].fieldName, 4))
+            shift1 = true
+          } else if (parsedFilteredData.shift == 2) {
+            if (shift1) {
+              row[i].push(getResult(parsedFilteredData, data.formDetails.formParameters[i], data.formDetails.formParameters[i].fieldName, 4))
+            } else {
+              row[i].push('<td colspan=4></td>')
+              row[i].push(getResult(parsedFilteredData, data.formDetails.formParameters[i], data.formDetails.formParameters[i].fieldName, 4))
+            }
+            shift2 = true
+          } else if (parsedFilteredData.shift == 3) {
+            if (shift1) {
+              if (shift2) {
+                row[i].push(getResult(parsedFilteredData, data.formDetails.formParameters[i], data.formDetails.formParameters[i].fieldName, 4))
+              } else {
+                row[i].push('<td colspan=4></td>')
+                row[i].push(getResult(parsedFilteredData, data.formDetails.formParameters[i], data.formDetails.formParameters[i].fieldName, 4))
+              }
+            } else {
+              row[i].push('<td colspan=4></td>')
+              if (shift2) {
+                row[i].push(getResult(parsedFilteredData, data.formDetails.formParameters[i], data.formDetails.formParameters[i].fieldName, 4))
+              } else {
+                row[i].push('<td colspan=4></td>')
+                row[i].push(getResult(parsedFilteredData, data.formDetails.formParameters[i], data.formDetails.formParameters[i].fieldName, 4))
+              }
+            }
+            shift3 = true
+          }
+
+          // if (filteredData.length > 0) {
+          //   row[i].push(getResult(parsedFilteredData[0], data.formDetails.formParameters[i], data.formDetails.formParameters[i].fieldName, 4))
+          // } else {
+          //   row[i].push('<td colspan=4></td>')
+          // }
+
+          // if (n == 3 || nextShift > moment(data.submittedForms[data.submittedForms.length - 1].createdAt)) {
+          //   if (n != 3) {
+          //     row[i] = `<tr>${row[i].join('')}${'<td colspan="4" style="width: 50px;"></td>'.repeat(3 - n)}</tr>` 
+          //   } else {
+          //     row[i] = `<tr>${row[i].join('')}</tr>`
+          //   }
+          // }
+          
+          if (!data.submittedForms[iter + 1] || moment(data.submittedForms[iter + 1].createdAt).format("YYYY-MM-DD HH:mm:SS") > moment(checkDate)) {
+            if (!shift2) {
+              if (!shift3) {
+                row[i] = `<tr>${row[i].join('')}${'<td colspan="4" ></td>'.repeat(2)}</tr>`
+              } else {
+                row[i] = `<tr>${row[i].join('')}${'<td colspan="4" ></td>'.repeat(1)}</tr>`
+              }
+            } else {
+              row[i] = `<tr>${row[i].join('')}${'<td colspan="4" ></td>'.repeat(1)}</tr>`
+            }
+          }
+        }
+        // if (n == 3 || nextShift > moment(data.submittedForms[data.submittedForms.length - 1].createdAt)) {
+        //   if (n != 3) {
+        //     // result += `${header}${'<td colspan="4"></td>'.repeat(3 - n)}</tr>`
+        //   } else {
+        //     // result += `${header}</tr>`
+        //   }
+        //   // header = ''
+        //   result += `${row.join('')}`
+        //   row = []
+        // }
+        // if (n >= 3) {
+        //   n = 1
+        // } else {
+        //   n++
+        // }
+
+        if (data.submittedForms[iter + 1]) {
+          const dataDate = moment(data.submittedForms[iter + 1].createdAt).format("YYYY-MM-DD HH:mm:SS");
+          if (moment(dataDate) < moment(checkDate)) {
+            newRow = false;
+          } else {
+            newRow = true;
+            shift1= false; shift2 = false; shift3 = false;
+            currentDate = checkDate;
+            checkDate = moment(checkDate).add(1, "days");
+            result += `${row.join('')}`
+            row = []
+          }
+        } else {
+          // if (!shift2) {
+          //   if (!shift3) {
+          //     row[i] = `<tr>${row[i].join('')}${'<td colspan="4" style="width: 50px;"></td>'.repeat(2)}</tr>`
+          //   } else {
+          //     row[i] = `<tr>${row[i].join('')}${'<td colspan="4" style="width: 50px;"></td>'.repeat(1)}</tr>`
+          //   }
+          // }
+          result += `${row.join('')}`
+          row = []
+        }
+
+      }
+    } else {
+      result += `<tr><td class="text-center ft9 bold">No.</td><td colspan=2 class="text-center ft9 bold">Parameter</td><td class="text-center ft9 bold">CCP/ORP</td><td colspan=2 class="text-center ft9 bold">Target/Standard</td><td colspan=4 class='text-center ft9'>Shif 1</td><td colspan=4 class='text-center ft9'>Shif 2</td><td colspan=4 class='text-center ft9'>Shif 3</td></tr>`
+      result += `<tr style='height: 20px;'><td class="text-center ft9 bold"></td><td colspan=2 class="text-center ft9 bold"></td><td class="text-center ft9 bold"></td><td colspan=2 class="text-center ft9 bold"></td> <td colspan='4' style='width: 50px'></td><td colspan='4' style='width: 50px'></td><td colspan='4' style='width: 50px'></td> </tr>`
+    }
+    return { result, operator, validator }
+  }
+
+  const getAsset = (file) => {
+    const BASE_URL = `${process.env.BASE_URL}/${file}`
+    return BASE_URL
+  }
+  const writeValidator = (data, type) => {
+    let result = ''
+    result += `<tr><td colspan=18 class="text-center ft10 bold color-gray2" style="width: 1400px;">Input Data</td></tr>
+              <tr><td colspan=9 class="text-center ft8" style="width: 1400px;">Operator ${type}</td>
+              <td colspan=9 class="text-center ft8" style="width: 1400px;">Jam Input</td>
+              </tr>
+              <tr>
+              <td colspan=9 class="text-center ft8 fgcolor-blue" style="width: 1400px; white-space: pre-line;">${data.operator_validator.operator.name}</td>
+              <td colspan=9 class="text-center ft8 fgcolor-blue" style="width: 1400px;">${data.operator_validator.operator.time}</td>
+              </tr>
+              <tr><td colspan=18 class="text-center ft10 bold color-gray2" style="width: 1400px;">VERIFICATION</td></tr>
+              <tr style="height: 20px;"><td colspan=5 rowspan=2 class="ft8 fgcolor-blue" style="width: 1400px; white-space: pre-line;">- Frekuensi Pengisian : Setiap awal produksi/PO produk baru\n' +
+              - Isi bagian Clearance dengan OK (v) atau NOT OK (x), diisi oleh OPERATOR masing masing bagian\n
+              - Isi bagian Checking dengan parameter yang dibutuhkan</td>
+              <td colspan=4 class="text-center ft8 fgcolor-blue" style="width: 1400px;">Team Leader</td>
+              <td colspan=5 class="text-center ft8 fgcolor-blue" style="width: 1400px;">Line Control</td>
+              <td colspan=4 class="text-center ft8 fgcolor-blue" style="width: 1400px;">Supervisor</td>
+              </tr>
+              <tr>
+              <td colspan=4 class="text-center ft8 fgcolor-blue" style="width: 1400px; white-space: pre-line;">${data.operator_validator.validator.TEAM_LEADER}</td>
+              <td colspan=5 class="text-center ft8 fgcolor-blue" style="width: 1400px; white-space: pre-line;">${data.operator_validator.validator.LINE_CONTROL}</td>
+              <td colspan=4 class="text-center ft8 fgcolor-blue" style="width: 1400px; white-space: pre-line;">${data.operator_validator.validator.SUPERVISOR}</td>
+              </tr>`
+    return result
+  }
+%>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Report</title>
+    <link rel="stylesheet" href="<%- getAsset('css/bootstrap.min.css') %>">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto">
+    <style type="text/css">
+      /* @page {
+        size: 210mm 297mm;
+        margin: 5mm 5mm 5mm 5mm;
+      } */
+      * {
+        font-family: 'Roboto', sans-serif;
+      }
+      .table-borderless > tbody > tr > td,
+      .table-borderless > tbody > tr > th,
+      .table-borderless > tfoot > tr > td,
+      .table-borderless > tfoot > tr > th,
+      .table-borderless > thead > tr > td,
+      .table-borderless > thead > tr > th {
+        border: none;
+      }
+      @media all {
+        /* @page {
+          size: 210mm 297mm;
+          margin: 5mm 5mm 5mm 5mm;
+        } */
+        * {
+          font-family: 'Roboto', sans-serif;
+        }
+        table {
+          page-break-after: auto;
+          border: 1px solid black;
+        }
+        tr {
+          page-break-inside: auto;
+          page-break-after: auto;
+        }
+        td {
+          border: 1px solid black;
+          page-break-inside: auto;
+          page-break-after: auto;
+          padding: 2px;
+        }
+        div {
+          page-break-inside: auto;
+          page-break-after: auto;
+        }
+        thead {
+          display: table-header-group;
+        }
+        tfoot {
+          display: table-footer-group;
+        }
+        .table-borderless tbody + tbody,
+        .table-borderless td,
+        .table-borderless th,
+        .table-borderless thead th {
+          border: 0 !important;
+        }
+        .color-gray1 {
+          background-color: #999999 !important;
+        }
+        .color-gray2 {
+          background-color: #D9D9D9 !important;
+        }
+        .color-red {
+          background-color: #F4CCCC !important;
+        }
+        .color-green {
+          background-color: #D9EAD3 !important;
+        }
+        .color-yellow {
+          background-color: #FCE5CD !important;
+        }
+        .fgcolor-blue {
+          color: #52D5FC !important;
+        }
+        .bold {
+          font-weight: bold;
+        }
+        .ft11 {
+          font-size: 11pt;
+        }
+        .ft10 {
+          font-size: 10pt;
+        }
+        .ft9 {
+          font-size: 9pt;
+        }
+        .ft8 {
+          font-size: 8pt;
+        }
+        .page {
+          page-break-before: always;
+          padding-top: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body style="margin-top: 15px;">
+    <div class="container-fluid">
+
+      <%# MONITORING AKHIR %>
+      <div class="row">
+        <div class="col-xs-2">
+          <img src="<%= getAsset('logo/logo.png') %>" style="width: 120px; margin-left: 54px" />
+        </div>
+        <div class="col-xs-10">
+          <table>
+            <tr><td colspan="6">Form</td></tr>
+            <tr><td colspan="6"> CHECKLIST MATERIAL TUMBLER</td></tr>
+            <tr><td colspan="6">PEMERIKSAAN MATERIAL TUMBLER (SIM 1)</td></tr>
+            <tr><td style="width: 100px">No. Form</td><td style="width: 278px">CF-PRO-F-20</td><td style="width: 100px">Version</td><td style="width: 278px"></td><td style="width: 100px">Start date/time</td><td style="width: 278px"><%= pro.StartedAtFormatted %></td></tr>
+            <tr><td style="width: 100px">Site</td><td style="width: 278px">3-Ciracas Factory</td><td style="width: 100px">Line</td><td style="width: 278px"><%= pro.line.name %></td><td style="width: 100px">End date/time</td><td style="width: 278px"><%- moment(pro.updatedAt).format('HH:mm:SS, DD MMM YYYY') %></td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-xs-12">
+          <table>
+            <tr>
+              <td class='color-gray1 text-center bold ft10' style="width: 140px">Nama Produk</td>
+              <td style="width: 560px" class="ft10"><%= pro.product.productName %></td>
+              <td style="width: 140px" class='color-gray1 text-center bold ft10'>PrO Sebelumnya</td>
+              <td style="width: 560px" class="ft10"></td>
+            </tr>
+            <tr>
+              <td class='color-gray1 bold text-center ft10' style="width: 140px">No. PrO</td>
+              <td style="width: 560px" class="ft10"><%= pro.productionNumber %></td>
+              <td style="width: 140px" class='color-gray1 bold text-center ft10'>Mesin</td>
+              <td style="width: 560px" class="ft10"></td>
+            </tr>
+            <tr>
+              <td class='color-gray1 bold text-center ft10' style="width: 140px;">No. Batch</td>
+              <td style="width: 560px" class="ft10"><%= pro.batchNumber %></td>
+              <td style="width: 140px" class='color-gray1 bold text-center ft10'></td>
+              <td style="width: 560px" class="ft10"></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div class="row" style="margin-top: 30px">
+        <div class="col-xs-12">
+          <table>
+            <tr>
+              <td colspan=18 class="text-center ft11 bold color-gray1" style="width: 1400px;">MONITORING KONDISI PRODUKSI</td>
+            </tr>
+            
+            <% const dataMonitoringAkhirPro = generateTablePerShift(data.MONITORING_AKHIR.monitoringAkhirPro, pro) %>
+            <%- dataMonitoringAkhirPro.result %>
+
+            <%- writeValidator(data.MONITORING_AKHIR, "TUMBLER") %>
+          </table>
+        </div>
+      </div>
+      
+      <%# MONITORING %>
+      <div style="page-break-before:always;" class="row">
+        <div class="col-xs-2">
+          <img src="<%= getAsset('logo/logo.png') %>" style="width: 120px; margin-left: 54px" />
+        </div>
+        <div class="col-xs-10">
+          <table>
+            <tr><td colspan="6">Form</td></tr>
+            <tr><td colspan="6"> CHECKLIST MATERIAL TUMBLER</td></tr>
+            <tr><td colspan="6">PEMERIKSAAN MATERIAL TUMBLER (SIM 1)</td></tr>
+            <tr><td style="width: 100px">No. Form</td><td style="width: 278px">CF-PRO-F-20</td><td style="width: 100px">Version</td><td style="width: 278px"></td><td style="width: 100px">Start date/time</td><td style="width: 278px"><%= pro.StartedAtFormatted %></td></tr>
+            <tr><td style="width: 100px">Site</td><td style="width: 278px">3-Ciracas Factory</td><td style="width: 100px">Line</td><td style="width: 278px"><%= pro.line.name %></td><td style="width: 100px">End date/time</td><td style="width: 278px"><%- moment(pro.updatedAt).format('HH:mm:SS, DD MMM YYYY') %></td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-xs-12">
+          <table>
+            <tr>
+              <td class='color-gray1 text-center bold ft10' style="width: 140px">Nama Produk</td>
+              <td style="width: 560px" class="ft10"><%= pro.product.productName %></td>
+              <td style="width: 140px" class='color-gray1 text-center bold ft10'>PrO Sebelumnya</td>
+              <td style="width: 560px" class="ft10"></td>
+            </tr>
+            <tr>
+              <td class='color-gray1 bold text-center ft10' style="width: 140px">No. PrO</td>
+              <td style="width: 560px" class="ft10"><%= pro.productionNumber %></td>
+              <td style="width: 140px" class='color-gray1 bold text-center ft10'>Mesin</td>
+              <td style="width: 560px" class="ft10"></td>
+            </tr>
+            <tr>
+              <td class='color-gray1 bold text-center ft10' style="width: 140px;">No. Batch</td>
+              <td style="width: 560px" class="ft10"><%= pro.batchNumber %></td>
+              <td style="width: 140px" class='color-gray1 bold text-center ft10'></td>
+              <td style="width: 560px" class="ft10"></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div class="row" style="margin-top: 30px">
+        <div class="col-xs-12">
+          <table>
+            <tr>
+              <td colspan=18 class="text-center ft11 bold color-gray1" style="width: 1400px;">MONITORING KONDISI PRODUKSI</td>
+            </tr>
+            
+            <% const dataMonitoring4H = generateTable1H(data.MONITORING.monitoring4H, pro) %>
+            <%- dataMonitoring4H.result %>
+
+            <%- writeValidator(data.MONITORING, "TUMBLER") %>
+
+            
+          </table>
+        </div>
+      </div>
+      
+    </div>
+  </body>
+</html>

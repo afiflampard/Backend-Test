@@ -1,0 +1,41 @@
+version: "3.3"
+
+volumes:
+  pg_data:
+    driver: local
+  mongodb_data_container: 
+
+networks:
+  backend:
+    driver: bridge
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: hash
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=hash123
+    restart: always
+    volumes:
+      - pg_data:/var/lib/postgresql/hash/data/
+    ports:
+      - 5432:5432
+    networks:
+      - backend
+    depends_on: 
+      - mongo
+  mongo:
+    image: mongo
+    container_name: hash_mongo
+    environment: 
+      - MONGO_INITDB_DATABASE=dummy
+      - MONGO_INITDB_ROOT_USERNAME=mongo
+      - MONGO_INITDB_ROOT_PASSWORD=hash123
+    volumes: 
+      - mongodb_data_container:/data/db_hash
+    ports:
+      - 27017:27017
+    networks: 
+      - backend 
