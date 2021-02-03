@@ -165,7 +165,6 @@ export default class UserController {
         [auth])
     public async update(req: _Request, res: Response): Promise<Response> {
         const {
-            username,
             firstName,
             lastName,
             roleId,
@@ -325,7 +324,7 @@ export default class UserController {
             }
         });
 
-        if (!user) return errorResponse({ res, msg: `User with id ${id} not found`, statusCode: 404 });
+        if (!user || user.id==1) return errorResponse({ res, msg: `User with id ${id} not found`, statusCode: 404 });
 
         await user.destroy();
 

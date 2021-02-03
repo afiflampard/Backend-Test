@@ -142,9 +142,6 @@ exports.swaggerSchemas = [
         UpdateUser: {
             title: "",
             properties: {
-                username: {
-                    type: "string",
-                },
                 firstName: {
                     type: "string",
                 },
@@ -154,19 +151,7 @@ exports.swaggerSchemas = [
                 avatarUrl: {
                     type: "string"
                 },
-                lineId: {
-                    type: "number",
-                },
-                areaId: {
-                    type: "number",
-                },
-                stepId: {
-                    type: "number",
-                },
                 roleId: {
-                    type: "number",
-                },
-                groupId: {
                     type: "number",
                 },
             },

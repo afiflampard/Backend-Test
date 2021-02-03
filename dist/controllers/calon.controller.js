@@ -26,7 +26,7 @@ const User_model_1 = __importDefault(require("../models/User.model"));
 let CalonController = class CalonController {
     create(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { id } = req.params;
+            const id = req.user.id;
             const { name } = req.body;
             const user = yield User_model_1.default.findOne({
                 where: {
@@ -68,7 +68,7 @@ let CalonController = class CalonController {
                 if (!user) {
                     return utils_1.errorResponse({ res, msg: `User with ${id} not found`, statusCode: 404 });
                 }
-                if (user.roleId == 2 && !user.isChoice) {
+                if (!user.isChoice) {
                     let suara;
                     let array = [];
                     let calon = yield Calon_model_1.default.findOne({
@@ -78,7 +78,7 @@ let CalonController = class CalonController {
                     });
                     if (calon.suaraIds != null) {
                         if (calon.suaraIds.includes(user.id)) {
-                            return utils_1.errorResponse({ res, msg: `User with id ${id} already choice`, statusCode: 500 });
+                            return utils_1.errorResponse({ res, msg: `User with id ${id} already choice`, statusCode: 400 });
                         }
                         else {
                             array.push(user.id);
@@ -108,9 +108,48 @@ let CalonController = class CalonController {
             }
         });
     }
+    updateCalon(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { id } = req.params;
+            const { idCalon } = req.query;
+            const { name } = req.body;
+            if (!name) {
+                utils_1.errorResponse({ res, msg: `Name must have writing`, statusCode: 400 });
+            }
+            try {
+                const user = yield User_model_1.default.findOne({
+                    where: {
+                        id
+                    },
+                    include: [
+                        {
+                            attributes: ["id", "name"],
+                            association: User_model_1.default.associations.role,
+                            as: "role"
+                        }
+                    ]
+                });
+                const calon = yield Calon_model_1.default.findOne({
+                    where: {
+                        id: idCalon
+                    }
+                });
+                if (user.role.name == "Staff") {
+                    calon.update({
+                        name: name
+                    });
+                }
+                return utils_1.successResponse({ res, msg: `Calon with ${idCalon} sudah diupdate` });
+            }
+            catch (e) {
+                const err = e;
+                return utils_1.errorResponse({ res, msg: err.message, statusCode: 500 });
+            }
+        });
+    }
 };
 __decorate([
-    decorators_1.Post({ path: "/:id" }, {
+    decorators_1.Post({ path: "/" }, {
         responses: [
             {
                 200: {
@@ -118,18 +157,6 @@ __decorate([
                     responseType: "object",
                     schema: "Calon"
                 },
-            }
-        ],
-        parameters: [
-            {
-                in: "path",
-                name: "id",
-                schema: {
-                    id: {
-                        type: "number"
-                    }
-                },
-                required: true
             }
         ],
         request: "NewCalon"
@@ -149,7 +176,7 @@ __decorate([
     }, [auth_1.auth])
 ], CalonController.prototype, "getCalons", null);
 __decorate([
-    decorators_1.Put({ path: "/:id" }, {
+    decorators_1.Put({ path: "/vote/:id" }, {
         responses: [
             {
                 200: {
@@ -178,6 +205,37 @@ __decorate([
         ]
     }, [auth_1.auth])
 ], CalonController.prototype, "updateVote", null);
+__decorate([
+    decorators_1.Put({ path: "/:id" }, {
+        responses: [
+            {
+                200: {
+                    description: "Response put object",
+                    responseType: "object",
+                    schema: "NewCalon"
+                }
+            }
+        ],
+        parameters: [
+            {
+                name: "idCalon",
+                in: "query",
+                schema: {
+                    type: "number"
+                }
+            },
+            {
+                name: "id",
+                in: "path",
+                schema: {
+                    type: "number"
+                },
+                required: true
+            }
+        ],
+        request: "NewCalon"
+    }, [auth_1.auth])
+], CalonController.prototype, "updateCalon", null);
 CalonController = __decorate([
     decorators_1.Controller("/calon")
 ], CalonController);

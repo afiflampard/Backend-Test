@@ -187,9 +187,6 @@ export const swaggerSchemas: Schemas[] = [
 		UpdateUser: {
 			title: "",
 			properties: {
-				username: {
-					type: "string",
-				},
 				firstName: {
 					type: "string",
 				},
@@ -199,19 +196,7 @@ export const swaggerSchemas: Schemas[] = [
 				avatarUrl: {
 					type: "string"
 				},
-				lineId: {
-					type: "number",
-				},
-				areaId: {
-					type: "number",
-				},
-				stepId: {
-					type: "number",
-				},
 				roleId: {
-					type: "number",
-				},
-				groupId: {
 					type: "number",
 				},
 			},

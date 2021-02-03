@@ -99,7 +99,7 @@ let UserController = class UserController {
     }
     update(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { username, firstName, lastName, roleId, avatarUrl, } = req.body;
+            const { firstName, lastName, roleId, avatarUrl, } = req.body;
             const { id } = req.params;
             try {
                 const user = yield User_model_1.default.findOne({
@@ -180,7 +180,7 @@ let UserController = class UserController {
                     exclude: ["password"]
                 }
             });
-            if (!user)
+            if (!user || user.id == 1)
                 return utils_1.errorResponse({ res, msg: `User with id ${id} not found`, statusCode: 404 });
             yield user.destroy();
             return utils_1.successResponse({ res, data: null });
